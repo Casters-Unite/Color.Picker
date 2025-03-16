@@ -2,6 +2,7 @@
 <html>
 <head>
 <title>Color Picker</title>
+<link rel="icon" href="sitefiles/icon.png" type="image/png">
 <style>
 body {
     font-family: sans-serif;
@@ -13,7 +14,12 @@ body {
     align-items: center;
     min-height: 100vh;
     box-sizing: border-box;
-    background-color: #222;
+    background-color: #222; /* Default background color */
+}
+
+/* Remove background if BG=false in URL */
+body.no-bg {
+    background-color: transparent;
 }
 
 .color-picker-container {
@@ -307,6 +313,7 @@ input[type="range"]::-moz-range-thumb {
   const hsvValueDiv = document.getElementById('hsv-text');
   const hslValueDiv = document.getElementById('hsl-text');
   const alphaSlider = document.getElementById('alphaSlider');
+  const body = document.querySelector('body'); //Reference to the body
 
   // Copy icon DOM element references
   const hexCopyIcon = document.getElementById('hexCopyIcon');
@@ -413,6 +420,26 @@ input[type="range"]::-moz-range-thumb {
     function copyHex() {
       copyColor('hex'); //Call copyColor with 'hex' argument.
     }
+
+  /**
+   * Converts a hex color code to RGB values
+   * @param {string} hex - The hex color code (e.g. #RRGGBB or #RRGGBBAA).
+   * @returns {object} An object with r, g, b, and a properties.  Returns null if the hex code is invalid.
+   */
+  function hexToRgba(hex) {
+      let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})?$/i.exec(hex); //Allow optional alpha
+
+      if (!result) {
+          return null; //Invalid hex code
+      }
+
+      let r = parseInt(result[1], 16);
+      let g = parseInt(result[2], 16);
+      let b = parseInt(result[3], 16);
+      let a = result[4] ? parseInt(result[4], 16) / 255 : 1; //Alpha defaults to 1 if not present
+
+      return { r: r, g: g, b: b, a: a };
+  }
 
   /**
    * Updates the color based on the current hue, saturation, value, and alpha.
@@ -574,6 +601,35 @@ input[type="range"]::-moz-range-thumb {
   }
 
   /**
+   * Parses the URL query string and sets the color picker state.
+   */
+  function initializeFromURL() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const colorParam = urlParams.get('Color');
+      const bgParam = urlParams.get('BG');
+
+      //Set color from URL
+      if (colorParam) {
+          const rgba = hexToRgba(colorParam);
+          if (rgba) {
+              //Convert RGB to HSL/HSV to set controls properly
+              //This is a placeholder.  It is not possible to do this reversibly without losing information in a simple way.
+              //Implement a better algorithm if needed.
+              hexColorInput.value = colorParam;
+
+              updateColor();
+          } else {
+              console.error("Invalid color in URL:", colorParam);
+          }
+      }
+
+      //Remove background if BG=false
+      if (bgParam === 'false') {
+          body.classList.add('no-bg');
+      }
+  }
+
+  /**
    * Event listener for the hue slider.
    * Updates the hue value and triggers a color update.
    */
@@ -645,6 +701,9 @@ input[type="range"]::-moz-range-thumb {
 
       updateColor();
   }
+
+  // Initialize color picker from URL parameters
+  initializeFromURL();
 
   // Initial color update
   updateColor();
